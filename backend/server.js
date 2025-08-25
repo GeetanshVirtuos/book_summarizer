@@ -1,15 +1,20 @@
 import { summarize_text } from "./controller/summarize_text.js";
+import { summarize_pdf } from "./controller/summarize_pdf.js";
 import express from 'express';
+import multer from 'multer';
 const app = express();
 const port = 3000;
 
 app.use(express.json());
 
+const upload = multer({ storage: multer.memoryStorage() });
+
 app.get('/', (req, res) => {
   res.send('Hello World! Welcome to the book Summarizer backend.')
 })
 
-app.post('/summarize', (req, res) => {
+/***** Summarize Text **********/
+app.post('/summarize_text', (req, res) => {
     let text = req.body.text;
     summarize_text(text).then((result)=>{
         res.send({summary: result});
@@ -18,6 +23,19 @@ app.post('/summarize', (req, res) => {
     });
 });
 
+/***** Summarize PDF **********/
+app.post('/summarize_pdf', upload.single('pdf'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).send({ error: "No PDF file uploaded." });
+        }
+        const buffer = req.file.buffer;
+        const summary = await summarize_pdf(buffer);
+        res.send({ summary });
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+});
 
 // Example usage
 // let text = `Crayon Shin-chan (Japanese: クレヨンしんちゃん, Hepburn: Kureyon Shin-chan) is a Japanese manga series written and illustrated by Yoshito Usui. Crayon Shin-chan made its first appearance in 1990 in a Japanese weekly magazine called Weekly Manga Action, which was published by Futabasha. Due to the death of author Yoshito Usui, the manga in its original form ended on September 11, 2009. A new manga began in the summer of 2010 by members of Usui's team,[6] titled New Crayon Shin-chan (新クレヨンしんちゃん, Shin Kureyon Shin-chan).

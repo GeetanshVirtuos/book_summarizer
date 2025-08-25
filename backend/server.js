@@ -1,5 +1,5 @@
 import { summarize_text } from "./controller/summarize_text.js";
-import { summarize_pdf } from "./controller/summarize_pdf.js";
+import { summarize_pdf, summarize_pdf_sse } from "./controller/summarize_pdf.js";
 import express from 'express';
 import multer from 'multer';
 const app = express();
@@ -23,15 +23,31 @@ app.post('/summarize_text', (req, res) => {
     });
 });
 
-/***** Summarize PDF **********/
+// /***** Summarize PDF : non streaming **********/
+// app.post('/summarize_pdf', upload.single('pdf'), async (req, res) => {
+//     try {
+//         if (!req.file) {
+//             return res.status(400).send({ error: "No PDF file uploaded." });
+//         }
+//         const buffer = req.file.buffer;
+//         const summary = await summarize_pdf(buffer);
+//         res.send({ summary });
+//     } catch (error) {
+//         res.status(500).send({ error: error.message });
+//     }
+// });
+
+/***** Summarize PDF : streaming version **********/
 app.post('/summarize_pdf', upload.single('pdf'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).send({ error: "No PDF file uploaded." });
         }
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
         const buffer = req.file.buffer;
-        const summary = await summarize_pdf(buffer);
-        res.send({ summary });
+        summarize_pdf_sse(buffer, res);
     } catch (error) {
         res.status(500).send({ error: error.message });
     }

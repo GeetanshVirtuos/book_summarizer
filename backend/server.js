@@ -2,12 +2,17 @@ import { summarize_text } from "./controller/summarize_text.js";
 import { summarize_pdf, summarize_pdf_sse } from "./controller/summarize_pdf.js";
 import express from 'express';
 import multer from 'multer';
+import cors from 'cors';
 const app = express();
 const port = 3000;
-
 app.use(express.json());
-
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Add CORS for "http://localhost:5173"
+app.use(cors({
+    origin: 'http://localhost:5173'
+}));
+
 
 app.get('/', (req, res) => {
   res.send('Hello World! Welcome to the book Summarizer backend.')

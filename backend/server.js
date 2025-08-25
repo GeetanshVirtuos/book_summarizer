@@ -51,9 +51,7 @@ app.post('/summarize_pdf', upload.single('pdf'), async (req, res) => {
 // Many of the jokes in the series stem from Shin-chan's occasionally weird, unnatural and inappropriate use of language, as well as from his mischievous behaviour. `;
 // summarize_text(text).then((result)=>{
 //     console.log("Result from Python script:", result);
-// });
-
-process.on("exit", () => py.kill());
+// });`
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)

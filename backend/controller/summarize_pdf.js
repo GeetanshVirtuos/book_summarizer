@@ -12,7 +12,7 @@ export async function summarize_pdf(pdf_buffer) {
     try {
         
         return new Promise((resolve, reject) => {
-            pdfExtract.extractBuffer(buffer, options, async (err, data) => {
+            pdfExtract.extractBuffer(pdf_buffer, options, async (err, data) => {
                 if (err) return reject(err);
                 try {
                     let summary = ``;
@@ -34,11 +34,10 @@ export async function summarize_pdf(pdf_buffer) {
     }
 }
 
-// Read the PDF file into a buffer
-const buffer = await fs.readFile('./pg_3_sample.pdf');
-
-summarize_pdf(buffer).then((result)=>{
-    console.log("PDF Summary:", result);
-}).catch((error)=>{
-    console.error("Error summarizing PDF:", error);
-});
+// Example usage: Read the PDF file into a buffer
+// const buffer = await fs.readFile('./sample_pdfs/pg_3_sample.pdf');
+// summarize_pdf(buffer).then((result)=>{
+//     console.log("PDF Summary:", result);
+// }).catch((error)=>{
+//     console.error("Error summarizing PDF:", error);
+// });

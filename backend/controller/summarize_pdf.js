@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 const pdfExtract = new PDFExtract();
 
 const options = {
-    lastPage: 3  
+    lastPage: 20  
 }; 
 
 
@@ -50,6 +50,7 @@ export async function summarize_pdf_sse(pdf_buffer, res) {
                 if (err) return reject(err);
                 try {
                     for(let i=0; i<data.pages.length; i++){
+                        if(data.pages.length >= 7 && i<5) continue; // Skip first 5 pages for books as they often contain Index or preface
                         let page = data.pages[i];
                         let pageText = page.content.map(item => item.str).join(' ');
                         let result = await summarize_text(pageText);

@@ -5,37 +5,7 @@ import { resolve } from "path";
 import { rejects } from "assert";
 const pdfExtract = new PDFExtract();
 
-const options = {
-    lastPage: 5  
-}; 
 
-
-
-export async function summarize_pdf(pdf_buffer) {
-    try {
-        
-        return new Promise((resolve, reject) => {
-            pdfExtract.extractBuffer(pdf_buffer, options, async (err, data) => {
-                if (err) return reject(err);
-                try {
-                    let summary = ``;
-                    for(let i=0; i<data.pages.length; i++){
-                        let page = data.pages[i];
-                        let pageText = page.content.map(item => item.str).join(' ');
-                        await summarize_text(pageText).then((result)=>{
-                            summary += result + " ";
-                        });
-                    }
-                    resolve(summary);
-                } catch (error) {
-                    reject(error);
-                }
-            });
-        });
-    } catch (error) {
-        throw error;
-    }
-}
 
 // Returns a summary of `entire_book` aiming for `targetWords` words.
 // - If `res` is provided and headers are not sent, the function will send { summary } to the client.
@@ -56,8 +26,8 @@ export async function summarize_pdf_target(entire_book, targetWords, res = null,
     throw new Error("Invalid targetWords; must be a positive number");
   }
 
-  // normalize input (if array of page texts is passed in, join them)
-  const text = Array.isArray(entire_book) ? entire_book.join(" ") : String(entire_book);
+  // // normalize input (if array of page texts is passed in, join them)
+  // const text = Array.isArray(entire_book) ? entire_book.join(" ") : String(entire_book);
 
   // helper: split text into words robustly
   const toWords = (s) => (s || "").split(/\s+/).filter(Boolean);
@@ -79,7 +49,7 @@ export async function summarize_pdf_target(entire_book, targetWords, res = null,
   };
 
   // First pass: chunk+summarize the whole book
-  const allWords = toWords(text);
+  const allWords = toWords(entire_book);
   if (allWords.length === 0) {
     // empty input -> empty output
     if (res && !res.headersSent) res.send({ summary: "" });
@@ -141,6 +111,9 @@ export async function summarize_pdf_target(entire_book, targetWords, res = null,
 export async function summarize_pdf_sse(pdf_buffer, res) {
     try {
         return new Promise((resolve, reject) => {
+            const options = {
+                lastPage: 20  
+            }; 
             pdfExtract.extractBuffer(pdf_buffer, options, async (err, data) => {
                 if (err) return reject(err);
                 try {

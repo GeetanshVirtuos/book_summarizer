@@ -1,5 +1,5 @@
 import { summarize_text } from "./controller/summarize_text.js";
-import { summarize_pdf, summarize_pdf_target, summarize_pdf_sse } from "./controller/summarize_pdf.js";
+import { summarize_pdf_target, summarize_pdf_sse } from "./controller/summarize_pdf.js";
 import express from 'express';
 import multer from 'multer';
 import cors from 'cors';
@@ -32,21 +32,7 @@ app.post('/summarize_text', (req, res) => {
     });
 });
 
-// /***** Summarize PDF : non streaming **********/
-// app.post('/summarize_pdf', upload.single('pdf'), async (req, res) => {
-//     try {
-//         if (!req.file) {
-//             return res.status(400).send({ error: "No PDF file uploaded." });
-//         }
-//         const buffer = req.file.buffer;
-//         const summary = await summarize_pdf(buffer);
-//         res.send({ summary });
-//     } catch (error) {
-//         res.status(500).send({ error: error.message });
-//     }
-// });
-
-/***** Summarize PDF : streaming version **********/
+/***** Summarize PDF : gist/one page/abridged/progressive summary **********/
 app.post('/summarize_pdf', upload.single('pdf'), async (req, res) => {
     try {
         if (!req.file) {
@@ -63,13 +49,14 @@ app.post('/summarize_pdf', upload.single('pdf'), async (req, res) => {
         }
         else{
             const options = {
-                lastPage: 10
+                lastPage: 20
             }; 
 
             pdfExtract.extractBuffer(pdf_buffer, options, async(err, data) => {
                 let entire_book = '';
 
                 for(let i=0; i<data.pages.length; i++){
+                        if(data.pages.length >= 7 && i<5) continue; // Skip first 5 pages for books as they often contain Index or preface
                         let page = data.pages[i];
                         entire_book += page.content.map(item => item.str).join(' ');
                 }
@@ -80,13 +67,13 @@ app.post('/summarize_pdf', upload.single('pdf'), async (req, res) => {
                 else if(summary_type == "o"){
                     summarize_pdf_target(entire_book, 500, res);  //Return one page target
                 }
-                else{
+                else if(summary_type == "a"){
                     // Return abridged summary: 2% of entire book length
                     const abridgedTarget = Math.max(1, Math.floor(entire_book.length * 0.02)); 
-                    // console.log(`abridged length: ${abridgedTarget}`);
-                    // console.log(`Entire book: ${entire_book.length}`);
-                    
                     summarize_pdf_target(entire_book, abridgedTarget, res);
+                }
+                else{
+                    res.status(400).send({ error: "Invalid summary type requested" });
                 }
                 //Note: "summarize_pdf_target()" calls res.end() itself
             })            

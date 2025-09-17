@@ -1,0 +1,2 @@
+/set parameter num_ctx 131072
+/set parameter num_ctx 8192

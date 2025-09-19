@@ -1,0 +1,2 @@
+Mistral-7b : local (bcz only 32K context window)(Alters some facts when text close to it's context window of 32k)
+Gemma-12b : cloud deployment (128k context window)

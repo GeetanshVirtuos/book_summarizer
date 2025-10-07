@@ -3,3 +3,6 @@
 /set parameter num_ctx 32224
 /set parameter num_ctx 8192
 
+
+This shows which models are loaded and whether they’re using GPU or CPU memory
+ollama ps

@@ -1,4 +1,4 @@
-import { summarize_text } from "./summarize_text.js";
+import { summarize_text, summarize_text_llm } from "./summarize_text.js";
 import { PDFExtract } from 'pdf.js-extract';
 import fs from 'fs/promises';
 import { resolve } from "path";
@@ -10,14 +10,14 @@ const pdfExtract = new PDFExtract();
 // Returns a summary of `entire_book` aiming for `targetWords` words.
 // - If `res` is provided and headers are not sent, the function will send { summary } to the client.
 // - Options:
-//    - chunkWords (default 500): how many words to feed to summarize_text at once.
-//    - maxIterations (default 8): safety cap for iterative summarization.
+//    - chunkWords (default 20000): how many words to feed to summarize_text_llm at once.
+//    - maxIterations (default 3): safety cap for iterative summarization.
 // Usage example:
-//    const summary = await summarize_pdf_target(fullText, 500);
-//    // or to auto-send: await summarize_pdf_target(fullText, 200, res);
-export async function summarize_pdf_target(entire_book, targetWords, res = null, options = {}) {
-  const CHUNK_WORDS = options.chunkWords || 500;     // how many words per summarize_text call
-  const MAX_ITERATIONS = options.maxIterations || 8; // avoid infinite loops
+//    const summary = await summarize_pdf_target(fullText, null, 500);
+//    // or to auto-send: await summarize_pdf_target(fullText, res, 200);
+export async function summarize_pdf_target(entire_book, res = null, targetWords = 20000, options = {}) {
+  const CHUNK_WORDS = options.chunkWords || 20000;     // how many words per summarize_text_llm call
+  const MAX_ITERATIONS = options.maxIterations || 3; // avoid infinite loops
   const MIN_TARGET = 1; // minimal allowed target
 
   // basic validation
@@ -39,8 +39,8 @@ export async function summarize_pdf_target(entire_book, targetWords, res = null,
       const slice = wordsArray.slice(i, i + CHUNK_WORDS);
       if (slice.length === 0) continue;
       const chunkText = slice.join(" ");
-      // NOTE: summarize_text is treated as a black box that returns the complete summary string for the chunk.
-      const s = await summarize_text(chunkText);
+      // NOTE: summarize_text_llm is treated as a black box that returns the complete summary string for the chunk.
+      const s = await summarize_text_llm(chunkText);
       if (s && s.toString().trim()) {
         accumulated += (accumulated ? " " : "") + s.toString().trim();
       }
@@ -59,7 +59,7 @@ export async function summarize_pdf_target(entire_book, targetWords, res = null,
   let summary = "";
   try {
     if (allWords.length <= CHUNK_WORDS) {
-      summary = await summarize_text(allWords.join(" "));
+      summary = await summarize_text_llm(allWords.join(" "));
     } else {
       summary = await summarizeChunks(allWords);
     }
@@ -76,7 +76,7 @@ export async function summarize_pdf_target(entire_book, targetWords, res = null,
     const summaryWords = toWords(summary);
     try {
       if (summaryWords.length <= CHUNK_WORDS) {
-        summary = await summarize_text(summaryWords.join(" "));
+        summary = await summarize_text_llm(summaryWords.join(" "));
       } else {
         summary = await summarizeChunks(summaryWords);
       }

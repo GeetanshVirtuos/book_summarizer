@@ -1,7 +1,9 @@
 import { spawn } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
+import ollama from 'ollama'
 
+// Function 1: summarize text using facebook/bart-large-cnn
 // __dirname replacement in ES modules
 const __filename = fileURLToPath(import.meta.url);
 // console.log("__filename:", __filename);
@@ -35,4 +37,25 @@ export async function summarize_text(text) {
         });
     });
 }
+
+// Function 2: summarize text using LLM
+export async function summarize_text_llm(text='Sample Text: This is sample text, please provide your own text!', model='gemma3:12b'){
+
+    let content = `I am providing you a TEXT and your task is to extract the crux of it and generate a summary in about 4 pages. You can choose a paragraph style summary with continuous text, synopsis style summary with Headings, Subheadings, points or a hybrid of the two depending on the TEXT.\nOutput only the summarized version, no extra instructions, questions, warnings etc.\n\n[TEXT START]\n\n${text}\n\n[TEXT END]`
+    
+    return new Promise(async (resolve, reject) => {
+        const response = await ollama.chat({
+        model: model,
+        stream: false,
+        messages: [{ role: 'user', content: content }],
+        "options": {
+            "num_ctx": 32224
+        }
+        })
+        console.log(response.message.content);
+        resolve(response.message.content)
+    })
+}
+
+
 

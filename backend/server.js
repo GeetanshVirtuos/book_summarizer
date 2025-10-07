@@ -61,20 +61,23 @@ app.post('/summarize_pdf', upload.single('pdf'), async (req, res) => {
                         entire_book += page.content.map(item => item.str).join(' ');
                 }
                 
-                if(summary_type == "g"){
-                    summarize_pdf_target(entire_book, 200, res); //Return gist
-                }
-                else if(summary_type == "o"){
-                    summarize_pdf_target(entire_book, 500, res);  //Return one page target
-                }
-                else if(summary_type == "a"){
-                    // Return abridged summary: 2% of entire book length
-                    const abridgedTarget = Math.max(1, Math.floor(entire_book.length * 0.02)); 
-                    summarize_pdf_target(entire_book, abridgedTarget, res);
-                }
-                else{
-                    res.status(400).send({ error: "Invalid summary type requested" });
-                }
+                summarize_pdf_target(entire_book, res); //Return gist
+                
+                // Requirements keep shifting, for now, there is just 1 type of summary : 2 - 3 page version
+                // if(summary_type == "g"){
+                //     summarize_pdf_target(entire_book, res, 200); //Return gist
+                // }
+                // else if(summary_type == "o"){
+                //     summarize_pdf_target(entire_book, res, 500);  //Return one page target
+                // }
+                // else if(summary_type == "a"){
+                //     // Return abridged summary: 2% of entire book length
+                //     const abridgedTarget = Math.max(1, Math.floor(entire_book.length * 0.02)); 
+                //     summarize_pdf_target(entire_book, res, abridgedTarget);
+                // }
+                // else{
+                //     res.status(400).send({ error: "Invalid summary type requested" });
+                // }
                 //Note: "summarize_pdf_target()" calls res.end() itself
             })            
         }

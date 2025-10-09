@@ -4,6 +4,10 @@
   box-sizing: border-box;
 }
 
+.test {
+  border: 2px solid red;
+}
+
 body {
   font-family: 'Inter', 'Segoe UI', 'Roboto', sans-serif;
   background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);

@@ -1,5 +1,70 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
+
+// A component to render HTML content within a Shadow DOM
+function ShadowContent({ html }) {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      // Create a shadow root if one doesn't already exist
+      if (!containerRef.current.shadowRoot) {
+        containerRef.current.attachShadow({ mode: 'open' });
+      }
+      // Set the inner HTML of the shadow root
+      containerRef.current.shadowRoot.innerHTML = html;
+    }
+  }, [html]); // Re-run this effect whenever the HTML content changes
+
+  return <div ref={containerRef} />;
+}
+
+const handlePrint = () => {
+  const printable = document.getElementById("printable");
+
+  if (!printable) return;
+
+  // Clone the printable element to avoid mutating the original
+  const clone = printable.cloneNode(true);
+
+  // ✅ Find shadow hosts and inline their shadow DOM content
+  const shadowHosts = printable.querySelectorAll("*");
+  shadowHosts.forEach((host, index) => {
+    if (host.shadowRoot) {
+      // Create a wrapper for shadow DOM content
+      const shadowWrapper = document.createElement("div");
+      shadowWrapper.innerHTML = host.shadowRoot.innerHTML;
+      // Insert it into the clone in the same position
+      const corresponding = clone.querySelectorAll("*")[index];
+      if (corresponding) {
+        corresponding.appendChild(shadowWrapper);
+      }
+    }
+  });
+
+  // Open print window
+  const newWin = window.open("", "_blank");
+  newWin.document.write(`
+    <html>
+      <head>
+        <title>Print</title>
+        <style>
+          body { font-family: sans-serif; padding: 20px; }
+          /* Add optional print styles here */
+        </style>
+      </head>
+      <body>${clone.innerHTML}</body>
+    </html>
+  `);
+  newWin.document.close();
+  newWin.focus();
+
+  // Wait for styles/images to load before printing
+  newWin.onload = () => {
+    newWin.print();
+    newWin.close();
+  };
+};
 
 function App() {
   const [dragActive, setDragActive] = useState(false);
@@ -61,38 +126,38 @@ function App() {
       body: formData,
     })
       .then((response) => {
-        if (!response.body) throw new Error("No response body");
-        
-        if (summaryType === "ps") {
-          // Handle streaming response for progressive summary
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          
-          function read() {
-            reader.read().then(({ done, value }) => {
-              if (done) {
-                setLoading(false);
-                return;
-              }
-              const chunk = decoder.decode(value, { stream: true });
-              // Parse SSE: data: ...\n\n
-              chunk.split("\n").forEach((line) => {
-                if (line.startsWith("data:")) {
-                  const data = line.replace("data:", "").trim();
-                  setSummary((prev) => prev + data);
+          if (!response.body) throw new Error("No response body");
+
+          if (summaryType === "ps") {
+            // Handle streaming response for progressive summary
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            
+            function read() {
+              reader.read().then(({ done, value }) => {
+                if (done) {
+                  setLoading(false);
+                  return;
                 }
+                const chunk = decoder.decode(value, { stream: true });
+                // Parse SSE: data: ...\n\n
+                chunk.split("\n").forEach((line) => {
+                  if (line.startsWith("data:")) {
+                    const data = line.replace("data:", "").trim();
+                    setSummary((prev) => prev + data);
+                  }
+                });
+                read();
               });
-              read();
-            });
-          }
-          read();
-        } else {
+            }
+            read();
+          } else {
           // Handle regular JSON response for other summary types
           response.json().then((data) => {
-            setLoading(false);
-            if (data.error) {
-              setError(data.error);
-            } else {
+        setLoading(false);
+        if (data.error) {
+          setError(data.error);
+        } else {
               setSummary(data.summary || data.result || "Summary generated successfully.");
             }
           });
@@ -180,9 +245,23 @@ function App() {
 
         {(summary || loading) && (
           <div className={`summary-area ${summary ? "show" : ""}`}>
-            <h2>Summary</h2>
-            <div className={`summary-text ${!summary ? "placeholder" : ""}`}>
-              {summary || "Your summary will appear here..."}
+            <div className="summary-header">
+                <h2>Summary</h2>
+                {summary && !loading && (
+                  <button onClick={handlePrint} className="print-button">
+                      Print Summary
+                  </button>
+                )}
+            </div>
+            
+            {loading && !summary && (
+              <div className="summary-text placeholder">Generating your summary...</div>
+            )}
+
+            {/* This is the container for the Shadow DOM, with the id for printing */}
+            <div id="printable" >
+              <p>djksafhajksdhngjkdfsgtvm ksjdhfjkhfcds haskjfndsdjkcfh sfhdjsch</p> {/* Forget smthing coming from the backend, even this static line goes missing in print preview when "display" css properties are set - so no prblms there */}
+                {summary && <ShadowContent html={summary} />}
             </div>
           </div>
         )}

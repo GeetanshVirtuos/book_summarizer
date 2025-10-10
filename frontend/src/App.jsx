@@ -260,7 +260,7 @@ function App() {
 
             {/* This is the container for the Shadow DOM, with the id for printing */}
             <div id="printable" >
-              <p>djksafhajksdhngjkdfsgtvm ksjdhfjkhfcds haskjfndsdjkcfh sfhdjsch</p> {/* Forget smthing coming from the backend, even this static line goes missing in print preview when "display" css properties are set - so no prblms there */}
+              {/* <p>Static Text to test PDF Printing</p> */}
                 {summary && <ShadowContent html={summary} />}
             </div>
           </div>

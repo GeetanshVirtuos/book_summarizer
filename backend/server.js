@@ -4,6 +4,7 @@ import express from 'express';
 import multer from 'multer';
 import cors from 'cors';
 import { PDFExtract } from 'pdf.js-extract';
+import { format_text_to_html_llm } from "./controller/format_text.js";
 
 const pdfExtract = new PDFExtract();
 const app = express();
@@ -61,7 +62,9 @@ app.post('/summarize_pdf', upload.single('pdf'), async (req, res) => {
                         entire_book += page.content.map(item => item.str).join(' ');
                 }
                 
-                summarize_pdf_target(entire_book, res); //Return gist
+                let summary = await summarize_pdf_target(entire_book, res); 
+                let html_summary = await format_text_to_html_llm(summary);
+                res.send({ summary: html_summary });
                 
                 // Requirements keep shifting, for now, there is just 1 type of summary : 2 - 3 page version
                 // if(summary_type == "g"){

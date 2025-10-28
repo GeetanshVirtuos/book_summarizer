@@ -1,10 +1,10 @@
-import { summarize_text } from "./controller/summarize_text.js";
-import { summarize_pdf_target, summarize_pdf_sse } from "./controller/summarize_pdf.js";
+import { summarize_text } from "./utility/summarize_text.js";
+import { summarize_pdf_target, summarize_pdf_sse } from "./utility/summarize_pdf.js";
 import express from 'express';
 import multer from 'multer';
 import cors from 'cors';
 import { PDFExtract } from 'pdf.js-extract';
-import { format_text_to_html_llm } from "./controller/format_text.js";
+import { format_text_to_html_llm } from "./utility/format_text.js";
 
 const pdfExtract = new PDFExtract();
 const app = express();

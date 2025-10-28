@@ -1,15 +1,19 @@
 import { summarize_text } from "./utility/summarize_text.js";
 import { summarize_pdf_target, summarize_pdf_sse } from "./utility/summarize_pdf.js";
+import { tts } from "./utility/tts.js"
+import { aws } from "./utility/aws.js";
 import express from 'express';
 import multer from 'multer';
 import cors from 'cors';
 import { PDFExtract } from 'pdf.js-extract';
 import { format_text_to_html_llm } from "./utility/format_text.js";
+import { writeFile } from 'node:fs/promises';
 
 const pdfExtract = new PDFExtract();
 const app = express();
 const port = 3000;
 
+app.use(express.static('public'))
 app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -117,6 +121,20 @@ The story sets the stage for a narrative centered on the clash between the munda
     }
 });
 
+app.get("/audio", async (req, res) => {
+    if(aws.audio_link === null){
+        const response = await tts(aws.summary, 'en-US', 'en-US-Chirp-HD-F')
+
+        const outputFile = './public/output.mp3';
+
+        // Save the generated binary audio content to a local file
+        await writeFile(outputFile, response.audioContent, 'binary');
+        console.log(`Audio content written to file: ${outputFile}`);
+        aws.audio_link = 'http://localhost:3000/output.mp3' // set/get aws link here
+    }
+
+    res.status(200).send(aws.audio_link)
+});
 
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
@@ -137,3 +155,9 @@ app.listen(port, () => {
 // summarize_text(text).then((result)=>{
 //     console.log("Result from Python script:", result);
 // });`
+
+
+
+
+
+

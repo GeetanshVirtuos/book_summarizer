@@ -1,0 +1,13 @@
+curl -X POST \
+     -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+     -H "Content-Type: application/json; charset=utf-8" \
+     -H "x-goog-user-project: affable-ring-162908" \
+     -d @request.json \
+     "https://texttospeech.googleapis.com/v1/projects/711921589843/locations/global:synthesizeLongAudio" 
+
+curl -X GET \
+     -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+     -H "x-goog-user-project: affable-ring-162908" \
+     "https://texttospeech.googleapis.com/v1/projects/711921589843/locations/global/operations/5056410164084969900"
+
+

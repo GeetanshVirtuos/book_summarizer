@@ -8,6 +8,7 @@ import cors from 'cors';
 import { PDFExtract } from 'pdf.js-extract';
 import { format_text_to_html_llm } from "./utility/format_text.js";
 import { writeFile } from 'node:fs/promises';
+// import { PollyClient, StartSpeechSynthesisTaskCommand, GetSpeechSynthesisTaskCommand } from "@aws-sdk/client-polly";
 
 const pdfExtract = new PDFExtract();
 const app = express();
@@ -19,7 +20,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Add CORS for "http://localhost:5173"
 app.use(cors({
-    origin: 'http://localhost:5173'
+    origin: "http://localhost:5173"
 }));
 
 
@@ -121,19 +122,71 @@ The story sets the stage for a narrative centered on the clash between the munda
     }
 });
 
-app.get("/audio", async (req, res) => {
+app.get("/audioLink", async (req, res) => {
     if(aws.audio_link === null){
-        const response = await tts(aws.summary, 'en-US', 'en-US-Chirp-HD-F')
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders(); // flush the headers to establish SSE with client
 
-        const outputFile = './public/output.mp3';
+        // Make aws-polly call to generate audio
+        let TaskId = 123 //ToDo
+        let taskStatus = "" //ToDo
 
-        // Save the generated binary audio content to a local file
-        await writeFile(outputFile, response.audioContent, 'binary');
-        console.log(`Audio content written to file: ${outputFile}`);
-        aws.audio_link = 'http://localhost:3000/output.mp3' // set/get aws link here
+        let pollTime = 1000; // In milliseconds 
+        let endPoll = false;
+
+        while(pollTime <= 10000 && !endPoll){
+            await new Promise((resolve, reject) => {
+                setTimeout(async ()=>{
+                    //Poll AWS for progress
+                    // const pollyClient = new PollyClient({region: "us-east-1"});
+                    // const command = new GetSpeechSynthesisTaskCommand({
+                    //     TaskId: TaskId,
+                    // });
+                    
+                    // try{
+                    //     const aws_response = await pollyClient.send(command);
+            
+                    //     if(aws_response.SynthesisTask.TaskStatus === "completed"){
+                    //         res.write("event: audio_synthesis_done\n")
+                    //         res.write(`data: {audio_url: "${aws_response.SynthesisTask.OutputUri}"}`)
+                    //         res.write('\n\n')
+                    //         endPoll = true;
+                    //     }
+            
+                    //     pollTime *= 2;
+                    //     resolve("AWS call made.")
+                    // } catch (error){
+                    //     console.error("Error retrieving task:", error);
+                    //     resolve("AWS call not made.")
+                    //     endPoll = true;
+                    // }
+
+                    //DELETE Code below this, this is just to test SSE implementation
+                    if(pollTime <= 4000){
+                        res.write("event: audio_synthesis_done\n")
+                        res.write(`data: {"OutputUri": "NOT YET"}`)
+                        res.write('\n\n')
+                    } else{
+                        res.write("event: audio_synthesis_done\n")
+                        res.write(`data: {"OutputUri": "YUP"}`)
+                        res.write('\n\n')
+                    }
+                    resolve()
+                    pollTime *= 2;
+                }, pollTime);  
+            })
+        }
+
+        // If client closes connection, stop sending events
+        res.on('close', () => {
+            console.log('client dropped me');
+            clearInterval(interValID);
+            res.end();
+        });
     }
-
-    res.status(200).send(aws.audio_link)
 });
 
 app.listen(port, () => {

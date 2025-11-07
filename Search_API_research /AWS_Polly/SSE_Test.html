@@ -14,8 +14,19 @@
         const evtSource = new EventSource("http://localhost:3001/audioLink");
 
         evtSource.addEventListener("audio_synthesis_done", (event) => {
-            console.log(`uri: ${(JSON.parse(event.data)).OutputUri}`);
+            console.log(`uri: ${(JSON.parse(event.data)).audio_url}`);
+            evtSource.close();
+        });
+
+        evtSource.addEventListener("audio_synthesis_inProgress", (event) => {
+            console.log(`Audio synthesis in Progress`);
+        });
+
+        evtSource.addEventListener("error_in_audio_synthesis", (event) => {
+            console.log(`Error in audio synthesis received from backend, closing connection`);
+            evtSource.close();
         });
     </script>
 </body>
 </html>
+

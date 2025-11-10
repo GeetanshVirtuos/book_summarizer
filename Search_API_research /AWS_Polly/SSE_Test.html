@@ -23,7 +23,7 @@
         });
 
         evtSource.addEventListener("error_in_audio_synthesis", (event) => {
-            console.log(`Error in audio synthesis received from backend, closing connection`);
+            console.log(`Error in audio synthesis received from backend, closing connection. Please try again later.`);
             evtSource.close();
         });
     </script>

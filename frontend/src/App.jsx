@@ -71,8 +71,13 @@ function App() {
   const [summary, setSummary] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [summaryType, setSummaryType] = useState("g"); // Default to gist
+  const [summaryType, setSummaryType] = useState("g");
+  const [audioUrl, setAudioUrl] = useState("");
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [audioError, setAudioError] = useState("");
+  
   const inputRef = useRef(null);
+  const eventSourceRef = useRef(null);
 
   const summaryOptions = [
     { value: "g", label: "Gist", description: "Quick overview (~200 words)" },
@@ -106,6 +111,8 @@ function App() {
   const handleFile = (file) => {
     setSummary("");
     setError("");
+    setAudioUrl("");
+    setAudioError("");
     if (file.type !== "application/pdf") {
       setError("Please upload a PDF file.");
       return;
@@ -170,13 +177,53 @@ function App() {
       });
   };
 
+  const handleGenerateAudio = () => {
+    setAudioUrl('');
+    setAudioError('');
+    setIsGeneratingAudio(true);
+
+    const evtSource = new EventSource("http://localhost:3000/audioLink");
+    eventSourceRef.current = evtSource;
+
+    evtSource.addEventListener("audio_synthesis_inProgress", () => {
+      console.log("Audio synthesis in progress...");
+    });
+
+    evtSource.addEventListener("audio_synthesis_done", (event) => {
+      const data = JSON.parse(event.data);
+      setAudioUrl(data.audio_url);
+      setIsGeneratingAudio(false);
+      evtSource.close();
+    });
+
+    evtSource.addEventListener("error_in_audio_synthesis", () => {
+      setAudioError("Failed to generate audio. Please try again later.");
+      setIsGeneratingAudio(false);
+      evtSource.close();
+    });
+
+    evtSource.onerror = () => {
+      setAudioError("Connection to audio service failed.");
+      setIsGeneratingAudio(false);
+      evtSource.close();
+    };
+  };
+
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+    };
+  }, []);
+
   const currentOption = summaryOptions.find(opt => opt.value === summaryType);
 
   return (
     <div className="app">
       <div className="container">
         <div className="header">
-          <h1 className="title">PDF Summarizer</h1>
+          <h1 className="title">Readly.ai</h1>
           <p className="subtitle">Transform lengthy documents into concise, actionable summaries</p>
         </div>
 
@@ -219,7 +266,7 @@ function App() {
             style={{ display: "none" }}
           />
           <div className="dropzone-content">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+             <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
               <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
             </svg>
             <span>
@@ -248,9 +295,30 @@ function App() {
             <div className="summary-header">
                 <h2>Summary</h2>
                 {summary && !loading && (
-                  <button onClick={handlePrint} className="print-button">
-                      Print Summary
-                  </button>
+                  <div className="audio-section">
+                    {summary && !loading && (
+                      <button onClick={handlePrint} className="print-button">
+                          Print Summary
+                      </button>
+                    )}
+                    {!isGeneratingAudio && !audioUrl && !audioError && (
+                       <button onClick={handleGenerateAudio} className="generate-audio-button">
+                         Generate Audio
+                       </button>
+                    )}
+                    {isGeneratingAudio && (
+                      <div className="loader">
+                        <div className="spinner"></div>
+                        <span>Generating audio...</span>
+                      </div>
+                    )}
+                    {audioError && <div className="error audio-error">{audioError}</div>}
+                    {audioUrl && (
+                      <audio controls src={audioUrl} className="audio-player">
+                        Your browser does not support the audio element.
+                      </audio>
+                    )}
+                  </div>
                 )}
             </div>
             
@@ -263,6 +331,7 @@ function App() {
               {/* <p>Static Text to test PDF Printing</p> */}
                 {summary && <ShadowContent html={summary} />}
             </div>
+            
           </div>
         )}
       </div>

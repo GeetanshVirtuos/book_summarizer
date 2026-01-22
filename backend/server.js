@@ -8,6 +8,7 @@ import { PDFExtract } from 'pdf.js-extract';
 import { format_text_to_html_llm } from "./utility/format_text.js";
 import { writeFile } from 'node:fs/promises';
 import { PollyClient, StartSpeechSynthesisTaskCommand, GetSpeechSynthesisTaskCommand } from "@aws-sdk/client-polly";
+import { prisma } from "./prisma.js";
 
 const pdfExtract = new PDFExtract();
 const app = express();

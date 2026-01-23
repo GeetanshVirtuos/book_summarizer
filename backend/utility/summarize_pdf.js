@@ -3,6 +3,7 @@ import { PDFExtract } from 'pdf.js-extract';
 import fs from 'fs/promises';
 import { resolve } from "path";
 import { rejects } from "assert";
+import { logger, LOG_TYPES } from './logger.js';
 const pdfExtract = new PDFExtract();
 
 
@@ -122,7 +123,7 @@ export async function summarize_pdf_sse(pdf_buffer, res) {
                         let page = data.pages[i];
                         let pageText = page.content.map(item => item.str).join(' ');
                         let result = await summarize_text(pageText);
-                        console.log('Sending chunk:', result);
+                        logger(`Sending chunk: ${result}`, LOG_TYPES.INFORMATION);
                         res.write(`data: ${result}\n\n`);
                         // Optionally flush if available
                         if (res.flush) res.flush();

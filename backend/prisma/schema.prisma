@@ -14,8 +14,21 @@ datasource db {
 }
 
 model User {
+  id      String @id @default(uuid())
+  email   String @unique
+  credits Int    @default(0)
+  books   Book[]
+}
+
+model Book {
   id             String  @id @default(uuid())
+  title          String?
+  author         String?
+  cover_link     String?
   summary        String?
   styled_summary String?
   audio_link     String?
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
 }

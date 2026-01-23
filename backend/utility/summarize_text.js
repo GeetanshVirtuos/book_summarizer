@@ -2,6 +2,7 @@ import { spawn } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
 import ollama from 'ollama'
+import { logger, LOG_TYPES } from './logger.js';
 
 // Function 1: summarize text using facebook/bart-large-cnn
 // __dirname replacement in ES modules
@@ -29,11 +30,11 @@ export async function summarize_text(text) {
 
         py.stderr.on("data", (data) => {
             error += data.toString();
-            console.error("Error from Python script:", error);
+            logger(`Error from Python script: ${error}`, LOG_TYPES.ERROR);
         });
 
         py.on("close", (code) => {
-            console.log(`Python exited with code ${code}`);
+            logger(`Python exited with code ${code}`, LOG_TYPES.INFORMATION);
         });
     });
 }
@@ -44,16 +45,23 @@ export async function summarize_text_llm(text='Sample Text: This is sample text,
     let content = `I am providing you a TEXT and your task is to extract the crux of it and generate a summary in about 4 pages. You can choose a paragraph style summary with continuous text, synopsis style summary with Headings, Subheadings, points or a hybrid of the two depending on the TEXT.\nOutput only the summarized version, no extra instructions, questions, warnings etc.\n\n[TEXT START]\n\n${text}\n\n[TEXT END]`
     
     return new Promise(async (resolve, reject) => {
-        const response = await ollama.chat({
-        model: model,
-        stream: false,
-        messages: [{ role: 'user', content: content }],
-        "options": {
-            "num_ctx": 32224
+        try {
+            logger(`Starting text summarization with model: ${model}`, LOG_TYPES.INFORMATION);
+            const response = await ollama.chat({
+                model: model,
+                stream: false,
+                messages: [{ role: 'user', content: content }],
+                "options": {
+                    "num_ctx": 32224,
+                    "timeout": 300000  // 5 minutes timeout
+                }
+            })
+            logger('Text summarization completed successfully', LOG_TYPES.SUCCESS);
+            resolve(response.message.content)
+        } catch (error) {
+            logger(`Error in summarize_text_llm: ${error.message}`, LOG_TYPES.ERROR);
+            reject(error);
         }
-        })
-        console.log(response.message.content);
-        resolve(response.message.content)
     })
 }
 

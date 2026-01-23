@@ -1,4 +1,5 @@
 import ollama from 'ollama'
+import { logger, LOG_TYPES } from './logger.js';
 
 export async function format_text_to_html_llm(text='Sample Text: This is sample text, please provide your own text!', model='gemma3:12b'){
 
@@ -28,16 +29,23 @@ Within this outer outline, you can use use almost all HTML tags EXCEPT top-level
 `
     
     return new Promise(async (resolve, reject) => {
-        const response = await ollama.chat({
-        model: model,
-        stream: false,
-        messages: [{ role: 'user', content: content }],
-        "options": {
-            "num_ctx": 32224
+        try {
+            logger(`Starting HTML formatting with model: ${model}`, LOG_TYPES.INFORMATION);
+            const response = await ollama.chat({
+                model: model,
+                stream: false,
+                messages: [{ role: 'user', content: content }],
+                "options": {
+                    "num_ctx": 32224,
+                    "timeout": 300000  // 5 minutes timeout
+                }
+            })
+            logger('HTML formatting completed successfully', LOG_TYPES.SUCCESS);
+            resolve(response.message.content)
+        } catch (error) {
+            logger(`Error in format_text_to_html_llm: ${error.message}`, LOG_TYPES.ERROR);
+            reject(error);
         }
-        })
-        console.log(response.message.content);
-        resolve(response.message.content)
     })
 }
 

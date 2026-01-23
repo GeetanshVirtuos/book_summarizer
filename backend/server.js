@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import summaryRouter from "./routes/summarize.js";
+import authRouter from "./routes/auth.js";
 import { logger, LOG_TYPES } from './utility/logger.js';
 
 const app = express();
@@ -21,6 +22,7 @@ app.get('/', (req, res) => {
 })
 
 app.use('/summarize', summaryRouter);
+app.use('/auth', authRouter);
 
 app.listen(port, () => {
     logger(`Server started and listening on port ${port}`, LOG_TYPES.SUCCESS);

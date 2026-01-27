@@ -19,6 +19,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 router.post('/createuser', async (req, res) => {
     try {
         const { email, password } = req.body;
+        logger(`${email}, ${password}`, LOG_TYPES.INFORMATION);
 
         // Validation
         if (!email || !password) {
@@ -33,7 +34,7 @@ router.post('/createuser', async (req, res) => {
 
         // Check if user already exists
         const existingUser = await prisma.user.findUnique({
-            where: { email }
+            where: { "email": email }
         });
 
         if (existingUser) {
@@ -48,8 +49,8 @@ router.post('/createuser', async (req, res) => {
         // Create user in database
         const user = await prisma.user.create({
             data: {
-                email,
-                passwordhash
+                "email": email,
+                "passwordhash": passwordhash
             }
         });
 

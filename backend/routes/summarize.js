@@ -34,6 +34,7 @@ router.post('/summarize_pdf', authMiddleware, upload.single('pdf'), async (req, 
         }
 
         const userId = req.userId;
+        const oneWeekInMs = 7 * 24 * 60 * 60 * 1000;
 
         // Check if user already has a book then enforce 1 week cooldown and send the old summary
         const existingBook = await prisma.book.findFirst({
@@ -46,7 +47,6 @@ router.post('/summarize_pdf', authMiddleware, upload.single('pdf'), async (req, 
             const now = new Date();
             const bookCreatedAt = new Date(existingBook.createdAt);
             const timeDifference = now - bookCreatedAt;
-            const oneWeekInMs = 7 * 24 * 60 * 60 * 1000;
 
             if (timeDifference < oneWeekInMs) {
                 const timeRemaining = oneWeekInMs - timeDifference;
@@ -60,6 +60,39 @@ router.post('/summarize_pdf', authMiddleware, upload.single('pdf'), async (req, 
             // Delete old book if 1 week has passed
             await prisma.book.delete({ where: { id: existingBook.id } });
             logger(`Deleted old book for user ${userId}`, LOG_TYPES.INFORMATION);
+        }
+
+        // Get user's IP address
+        const userIpAddress = req.ip || req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+        logger(`Request from IP: ${userIpAddress}`, LOG_TYPES.INFORMATION);
+
+        // Find or create IP address record
+        let ipRecord = await prisma.ipAddress.findUnique({
+            where: { address: userIpAddress }
+        });
+
+        if (ipRecord) {
+            // Check if this IP was used within 1 week
+            const timeDifference = Date.now() - ipRecord.lastUsed.getTime();
+            
+            if (timeDifference < oneWeekInMs) {
+                const daysRemaining = Math.ceil((oneWeekInMs - timeDifference) / (24 * 60 * 60 * 1000));
+                logger(`IP ${userIpAddress} tried to summarize before 1 week cooldown`, LOG_TYPES.WARNING);
+                return res.status(429).json({ 
+                    error: `This IP address was recently used. Please wait ${daysRemaining} more day(s).`
+                });
+            }
+            // Update lastUsed if cooldown passed
+            ipRecord = await prisma.ipAddress.update({
+                where: { id: ipRecord.id },
+                data: { lastUsed: new Date() }
+            });
+        } else {
+            // Create new IP record
+            ipRecord = await prisma.ipAddress.create({
+                data: { address: userIpAddress }
+            });
+            logger(`New IP address logged: ${userIpAddress}`, LOG_TYPES.INFORMATION);
         }
 
         const pdf_buffer = req.file.buffer;
@@ -113,7 +146,8 @@ The small detail of the cat reading a map, initially dismissed by Mr. Dursley, f
 The story sets the stage for a narrative centered on the clash between the mundane and the magical, between the desire for normalcy and the inevitability of change. The Dursleys’ rigid adherence to their self-imposed standards of normality creates a fertile ground for conflict, as the forces they attempt to suppress inevitably break through, disrupting their carefully controlled world and exposing the fragility of their carefully constructed reality. The initial quiet and order of Privet Drive belies the extraordinary events that are about to unfold, signaling the imminent arrival of a force that will forever alter the Dursleys' lives.
                 `
                 
-                let html_summary = await format_text_to_html_llm(summary);
+                // let html_summary = await format_text_to_html_llm(summary);
+                let html_summary = `<div><h2>The Unconventional Life of the Dursleys and the Arrival of a Secret</h2><p>The story begins with the Dursleys, a seemingly ordinary couple residing at number four, Privet Drive. They pride themselves on their normalcy and vehemently reject anything unconventional or mysterious. Mr. Dursley, a stout man </p></div>`; // Placeholder HTML summary
                 
                 // Store book in database
                 const book = await prisma.book.create({
@@ -166,6 +200,34 @@ router.get("/audioLink", authMiddleware, async (req, res) => {
     });
     
     const userId = req.userId;
+    const oneWeekInMs = 7 * 24 * 60 * 60 * 1000;
+    
+    // Get user's IP address
+    const userIpAddress = req.ip || req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+    
+    // Find IP address record
+    let ipRecord = await prisma.ipAddress.findUnique({
+        where: { address: userIpAddress }
+    });
+
+    if (ipRecord) {
+        // Check if this IP was used within 1 week
+        const timeDifference = Date.now() - ipRecord.lastUsed.getTime();
+        
+        if (timeDifference < oneWeekInMs) {
+            const daysRemaining = Math.ceil((oneWeekInMs - timeDifference) / (24 * 60 * 60 * 1000));
+            logger(`IP ${userIpAddress} tried to access audio before 1 week cooldown`, LOG_TYPES.WARNING);
+            res.write("event: error_ip_cooldown\n");
+            res.write(`data: {"error": "This IP address was recently used. Please wait ${daysRemaining} more day(s)."}\n`);
+            res.write('\n\n');
+            return;
+        }
+    } else {
+        // Create new IP record
+        ipRecord = await prisma.ipAddress.create({
+            data: { address: userIpAddress }
+        });
+    }
     
     // Get user's book from database
     const book = await prisma.book.findFirst({
@@ -173,7 +235,6 @@ router.get("/audioLink", authMiddleware, async (req, res) => {
         orderBy: { createdAt: 'desc' }
     });
 
-    const oneWeekInMs = 7 * 24 * 60 * 60 * 1000;
     let timeDifference = 0;
 
     if(book){   

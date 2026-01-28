@@ -14,12 +14,13 @@ datasource db {
 }
 
 model User {
-  id           String  @id @default(uuid())
+  id           String   @id @default(uuid())
   passwordhash String
-  email        String  @unique
-  credits      Int     @default(0)
+  email        String   @unique
+  credits      Int      @default(0)
   name         String?
   books        Book[]
+  userIps      UserIp[]
 }
 
 model Book {
@@ -32,6 +33,26 @@ model Book {
   audio_link     String?
   createdAt      DateTime @default(now()) @db.Timestamptz()
 
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
+}
+
+model ipAddress {
+  id      String   @id @default(uuid())
+  address String   @unique
+  userIps UserIp[]
+}
+
+model UserIp {
+  id         String   @id @default(uuid())
+  userId     String
+  ipId       String
+  dateIpUsed DateTime @default(now()) @db.Timestamptz()
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ip   ipAddress @relation(fields: [ipId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ipId])
+  @@index([userId])
+  @@index([ipId])
 }
